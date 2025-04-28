@@ -72,7 +72,7 @@ Example of search in all OneDrive:
 $ > search password https://xxxxxxxx-my.sharepoint.com/personal/
 ```
 
-### `search_all` – Targeted Search
+### `search_all` – Broad Search Across the Tenant
 
 The `search_all` command performs a global search across all available SharePoint and OneDrive content within the specified Microsoft region.
 ```powershell
