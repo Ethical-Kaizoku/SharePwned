@@ -29,9 +29,7 @@ Before using **SharePwned**, ensure you meet the following requirements:
 - **Microsoft Graph API Access:**  
   A registered application in Azure Active Directory with the following **Application Permissions**:
   - `Sites.Read.All` (best option: recommended for a stealthier `search_all` feature)
-
-or
-  
+  or 
   - `Directory.Read.All` (to list users and their OneDrive)
   - `Files.Read.All` (to explore OneDrive content)
   - `Sites.FullControl` (to explore SharePoint content)
