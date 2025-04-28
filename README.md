@@ -85,7 +85,7 @@ $ > search_all password
 ```
 
 > ⚠️ **Warning**  
-> Without `Sites.Read.All` permission, the search_all feature will try:
+> Without `Sites.Read.All` permission, the search_all feature will try to:
 > 1. List users
 > 2. Perform a search request in each OneDrive drive
 > 3. List SharePoint sites
