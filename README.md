@@ -107,11 +107,15 @@ Method 2. Using the `DriveId` and `ItemId` corresponding to a specific file
 $ > download <DriveId> <ItemId>
 ```
 
-You can configure an output folder for downloaded files using the `folder` command.
+You can configure an output folder for downloaded files using the `folder <folder path>` command.
 
 ## Log outputs
 This feature allows you to write all search results to a file.
 You can later refer to these logs to retrieve specific files without having to perform another search.
+
+```powershell
+$ > logfile <filename>
+```
 
 ## Example Workflow
 ```powershell
@@ -136,3 +140,4 @@ Please submit a pull request if you would like to contribute.
 
 ## Wavestone article
 The following [RiskInsight article](https://www.riskinsight-wavestone.com/) provides a real-life example of this tool used during a Red Team operation.
+
