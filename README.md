@@ -139,5 +139,6 @@ We are always looking for contributors!
 Please submit a pull request if you would like to contribute.
 
 ## Wavestone article
-The following [RiskInsight article](https://www.riskinsight-wavestone.com/) provides a real-life example of this tool used during a Red Team operation.
+The following [RiskInsight article]([https://www.riskinsight-wavestone.com/](https://www.riskinsight-wavestone.com/en/2025/10/sharepoint-app-registrations-a-vector-for-it-system-compromise-and-red-team-feedback/)) provides a real-life example of this tool used during a Red Team operation.
+
 
