@@ -1,8 +1,9 @@
-﻿param(
+param(
     [string]$TenantId,
     [string]$ClientId,
     [string]$ClientSecret,
     [string]$AccessToken,
+    [string]$CertificateThumbprint,
     [string]$Region = 'EUR',
     [string]$OutFile = $null,
     [string]$Folder = $null,
@@ -38,17 +39,20 @@ function Show-Help {
 
 # Main interactive function
 function Open-InteractiveShell {
-    [CmdletBinding(DefaultParameterSetName = 'AppAuth')]
+    [CmdletBinding(DefaultParameterSetName = 'PasswordAuth')]
     param (
-        [Parameter(Mandatory = $true, ParameterSetName = 'AppAuth')]
+        [Parameter(Mandatory = $true)]
         [string]$TenantId,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'AppAuth')]
+        [Parameter(Mandatory = $true)]
         [string]$ClientId,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'AppAuth')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'PasswordAuth')]
         [string]$ClientSecret,
 
+        [Parameter(Mandatory = $true, ParameterSetName = 'CertAuth')]
+        [string]$CertificateThumbprint,
+        
         [Parameter(Mandatory = $true, ParameterSetName = 'TokenAuth')]
         [string]$AccessToken,
 
@@ -70,7 +74,7 @@ function Open-InteractiveShell {
 
     # Get an access token
     if (-not $accessToken) {
-        $tokenInfo = Connect-ToGraph -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -DebugMode $DebugMode
+        $tokenInfo = Connect-ToGraph -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -CertificateThumbprint $CertificateThumbprint -DebugMode $DebugMode
         if (-not $tokenInfo) { return }
     } else {
         $tokenInfo = @{
@@ -92,7 +96,7 @@ function Open-InteractiveShell {
         $command = Read-Host
         $commandParts = $command -split '\s+'
 
-        $tokenInfo = Update-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -TokenInfo $tokenInfo -DebugMode $DebugMode
+        $tokenInfo = Update-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -CertificateThumbprint $CertificateThumbprint -TokenInfo $tokenInfo -DebugMode $DebugMode
         if (-not $tokenInfo) { return }
 
         switch -Wildcard ($commandParts[0]) {
@@ -323,6 +327,9 @@ function Update-AccessToken {
         [Parameter(Mandatory = $false)]
         [string]$ClientSecret,
 
+        [Parameter(Mandatory = $false)]
+        [string]$CertificateThumbprint,
+
         [Parameter(Mandatory = $true)]
         [bool]$DebugMode
     )
@@ -354,28 +361,64 @@ function Connect-ToGraph {
         [Parameter(Mandatory = $true)]
         [string]$ClientId,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$ClientSecret,
+
+        [Parameter(Mandatory = $false)]
+        [string]$CertificateThumbprint,
 
         [Parameter(Mandatory = $true)]
         [bool]$DebugMode
     )
 
-    $body = @{
-        grant_type    = "client_credentials"
-        client_id     = $clientId
-        client_secret = $clientSecret
-        scope         = "https://graph.microsoft.com/.default"
-    }
+    if ($CertificateThumbprint) {
+        if ($DebugMode) { Write-Host "[DEBUG] Authenticating with certificate." -ForegroundColor Yellow }
 
-    $headers = @{
-        "Content-Type" = "application/x-www-form-urlencoded"
+        $stores = "CurrentUser","LocalMachine"
+        foreach ($store in $stores) {
+            $cert = Get-Item "Cert:\$store\My\$CertificateThumbprint" -ErrorAction SilentlyContinue
+            if ($cert) { break }
+        }
+        if (!$cert -or $cert.NotAfter -lt (Get-Date)) {
+            if ($DebugMode) { Write-Host "[ERROR] Certificate missing or invalid." -ForegroundColor Red }
+            return $null
+        }
+        
+        function b64url([byte[]]$bytes) { return [Convert]::ToBase64String($bytes).Split('=')[0].Replace('+', '-').Replace('/', '_') }
+        $header = @{ alg="RS256"; typ="JWT"; x5t=(b64url $Cert.GetCertHash()) } | ConvertTo-Json -Compress
+        $payload = @{
+            aud="https://login.microsoftonline.com/$TenantId/v2.0"; exp=([DateTimeOffset]::Now.ToUnixTimeSeconds()+600)
+            iss=$ClientId; jti=[guid]::NewGuid().ToString(); nbf=([DateTimeOffset]::Now.ToUnixTimeSeconds()); sub=$ClientId
+        } | ConvertTo-Json -Compress
+        
+        $data = "$(b64url([System.Text.Encoding]::UTF8.GetBytes($header))).$(b64url ([System.Text.Encoding]::UTF8.GetBytes($payload)))"
+        $rsa = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($cert)
+        $sig = b64url($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes($data), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1))
+        
+        $body = @{
+            grant_type       = "client_credentials"; 
+            client_id        = $ClientId; client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+            client_assertion = "$data.$sig"; 
+            scope            = "https://graph.microsoft.com/.default"
+        }
+    } else {
+        if ($DebugMode) { Write-Host "[DEBUG] Authenticating with Client Secret." -ForegroundColor Yellow }
+        $body = @{
+            grant_type    = "client_credentials";
+            client_id     = $ClientId
+            client_secret = $ClientSecret
+            scope         = "https://graph.microsoft.com/.default"
+        }
+        $headers = @{
+            "Content-Type" = "application/x-www-form-urlencoded"
+        }
     }
-
+    
     # Authenticate to Microsoft Graph
-    $response = (Invoke-WebRequest "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -Method Post -Headers $headers -Body $body).Content
-    $accessToken = ($response | ConvertFrom-Json).access_token
-    $tokenExpiration = ($response | ConvertFrom-Json).expires_in
+    $response = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -Body $Body -Headers $headers
+    
+    $accessToken = $response.access_token
+    $tokenExpiration = $response.expires_in
     $currentDateTime = Get-Date
     $tokenExpirationDate = $currentDateTime.AddSeconds($tokenExpiration)
 
@@ -846,11 +889,12 @@ function Get-FileWithGraphAPI {
     return $true
 }
 
-if ($tenantId -and $clientId -and $clientSecret) {
-    Open-InteractiveShell -TenantId $tenantId -ClientId $clientId -ClientSecret $clientSecret -Region $Region -OutFile $OutFile -Folder $Folder -DebugMode $DebugMode
-} elseif ($accessToken) {
-    Open-InteractiveShell -AccessToken $accessToken -Region $Region -OutFile $OutFile -Folder $Folder -DebugMode $DebugMode
+if ($TenantId -and $ClientId -and $ClientSecret) {
+    Open-InteractiveShell -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Region $Region -OutFile $OutFile -Folder $Folder -DebugMode $DebugMode
+} elseif ($TenantId -and $ClientId -and $CertificateThumbprint) {
+    Open-InteractiveShell -TenantId $TenantId -ClientId $ClientId -CertificateThumbprint $CertificateThumbprint -Region $Region -OutFile $OutFile -Folder $Folder -DebugMode $DebugMode
+} elseif ($AccessToken) {
+    Open-InteractiveShell -AccessToken $AccessToken -Region $Region -OutFile $OutFile -Folder $Folder -DebugMode $DebugMode
 } else {
     Open-InteractiveShell -Region $Region -OutFile $OutFile -Folder $Folder -DebugMode $DebugMode
 }
-
