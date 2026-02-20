@@ -45,7 +45,8 @@ Authenticate and launch the interactive shell by providing your Azure credential
 
 ```powershell
 PS C:\> .\SharePwned.ps1 -TenantId '<TenantId>' -ClientId '<ClientId>' -ClientSecret '<ClientSecret>' -Region 'FRA'
-
+or
+PS C:\> .\SharePwned.ps1 -TenantId '<TenantId>' -ClientId '<ClientId>' -CertificateThumbprint '<CertificateThumbprint>' -Region 'FRA' 
 ```
 
 Once the access token expires, a new authentication request is automatically sent.
@@ -140,6 +141,7 @@ Please submit a pull request if you would like to contribute.
 
 ## Wavestone article
 The following [RiskInsight article](https://www.riskinsight-wavestone.com/en/2025/10/sharepoint-app-registrations-a-vector-for-it-system-compromise-and-red-team-feedback/) provides a real-life example of this tool used during a Red Team operation.
+
 
 
 
