@@ -41,10 +41,12 @@ function Show-Help {
 function Open-InteractiveShell {
     [CmdletBinding(DefaultParameterSetName = 'PasswordAuth')]
     param (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'PasswordAuth')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'CertAuth')]
         [string]$TenantId,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'PasswordAuth')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'CertAuth')]
         [string]$ClientId,
 
         [Parameter(Mandatory = $true, ParameterSetName = 'PasswordAuth')]
@@ -499,13 +501,13 @@ function Search-InAllDrivesWithGraphAPI {
                 }
                 Write-Host "[" $count "]" $resource.name -ForegroundColor Green
                 Write-Host "`tURL: "$resource.webUrl
-                Write-Host "`tDriveID:" $resource.parentReference.driveId "`tItemID:" $resource.id
+                Write-Host "`tDriveID & ItemID: $($resource.parentReference.driveId) $($resource.id)"
                 Write-Host "`tLastModifiedDateTime: "$resource.lastModifiedDateTime
 
                 if ($OutFile) {
                     Write-Output "[" $count "]" $resource.name | Out-File -Append -FilePath $OutFile
                     Write-Output "`tURL: $($resource.webUrl)" | Out-File -Append -FilePath $OutFile
-                    Write-Output "`tDriveID:" $resource.parentReference.driveId "`tItemID:" $resource.id | Out-File -Append -FilePath $OutFile
+                    Write-Output "`tDriveID & ItemID: $($resource.parentReference.driveId) $($resource.id)" | Out-File -Append -FilePath $OutFile
                     Write-Output "`tLastModifiedDateTime: $($resource.lastModifiedDateTime)" | Out-File -Append -FilePath $OutFile
                 }
 
@@ -556,13 +558,13 @@ function Search-InAllDrivesWithGraphAPI {
                 }
                 Write-Host "[" $count "]" $resource.name -ForegroundColor Green
                 Write-Host "`tURL: "$resource.webUrl
-                Write-Host "`tDriveID:" $resource.parentReference.driveId "`tItemID:" $resource.id
+                Write-Host "`tDriveID & ItemID: $($resource.parentReference.driveId) $($resource.id)"
                 Write-Host "`tLastModifiedDateTime: "$resource.lastModifiedDateTime
 
                 if ($OutFile) {
                     Write-Output "[" $count "]" $resource.name | Out-File -Append -FilePath $OutFile
                     Write-Output "`tURL: $($resource.webUrl)" | Out-File -Append -FilePath $OutFile
-                    Write-Output "`tDriveID:" $resource.parentReference.driveId "`tItemID:" $resource.id | Out-File -Append -FilePath $OutFile
+                    Write-Output "`tDriveID & ItemID: $($resource.parentReference.driveId) $($resource.id)" | Out-File -Append -FilePath $OutFile
                     Write-Output "`tLastModifiedDateTime: $($resource.lastModifiedDateTime)" | Out-File -Append -FilePath $OutFile
                 }
 
@@ -664,14 +666,14 @@ function Search-FilesWithGraphAPI {
                 Write-Host "[" $count "]" $resource.name -ForegroundColor Green
                 Write-Host "`tURL: $($resource.webUrl)"
                 Write-Host "`tLastModifiedDateTime: $($resource.lastModifiedDateTime)"
-                Write-Host "`tDriveID: $($resource.parentReference.driveId) `tItemID: $($resource.id)"
+                Write-Host "`tDriveID & ItemID: $($resource.parentReference.driveId) $($resource.id)"
                 Write-Host "`tSummary: $($hit.summary)"
 
                 if ($OutFile) {
                     Write-Output "[ $count ] " $resource.name | Out-File -Append -FilePath $OutFile -NoNewline
                     Write-Output "`tURL: $($resource.webUrl)" | Out-File -Append -FilePath $OutFile
                     Write-Output "`tLastModifiedDateTime: $($resource.lastModifiedDateTime)" | Out-File -Append -FilePath $OutFile
-                    Write-Output "`tDriveID: $($resource.parentReference.driveId) `tItemID: $($resource.id)" | Out-File -Append -FilePath $OutFile
+                    Write-Output "`tDriveID & ItemID: $($resource.parentReference.driveId) $($resource.id)" | Out-File -Append -FilePath $OutFile
                     Write-Output "`tSummary: $($hit.summary)" | Out-File -Append -FilePath $OutFile
                 }
 
@@ -779,7 +781,7 @@ function Get-DriveItemsWithGraphAPI {
                     Summary               = $hit.summary
                 }
                 Write-Host "[" $count "]" $resource.webUrl -ForegroundColor Green
-                Write-Host "`tDriveID:" $resource.parentReference.driveId "`tItemID:" $resource.id
+                Write-Host "`tDriveID & ItemID: $($resource.parentReference.driveId) $($resource.id)"
                 $allResults += $tableData
                 $count += 1
             }
